@@ -12,7 +12,11 @@ dotenv.config();
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+const cors = require('cors');
+app.use(cors({
+  origin: 'https://weather-app-frontend-alpha-blush.vercel.app/'
+}));
+
 
 mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
 
