@@ -5,20 +5,17 @@ const cron = require('node-cron');
 const axios = require('axios');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
-const PDFDocument = require('pdfkit');
 const User = require('./models/User');
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
-const cors = require('cors');
-app.use(cors({
-  origin: 'https://weather-app-frontend-alpha-blush.vercel.app/'
-}));
+app.use(cors());
 
-
-mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.error('MongoDB connection error:', err));
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -28,63 +25,15 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-function generateWeatherPDF(user, weather) {
-  return new Promise((resolve, reject) => {
-    const doc = new PDFDocument();
-    let buffers = [];
-    
-    doc.on('data', buffers.push.bind(buffers));
-    doc.on('end', () => {
-      let pdfData = Buffer.concat(buffers);
-      resolve(pdfData);
-    });
-    
-    doc.on('error', reject);
-
-    // Title
-    doc.fontSize(20).text(`Weather Report for ${user.location}`, {
-      align: 'center',
-      underline: true
-    });
-    doc.moveDown();
-
-    // User details
-    doc.fontSize(12).text(`Email: ${user.email}`, { align: 'left' });
-    doc.fontSize(12).text(`Date: ${new Date().toISOString().split('T')[0]}`, { align: 'left' });
-    doc.moveDown();
-
-    // Weather details
-    doc.fontSize(16).text('Weather Details', { underline: true });
-    doc.moveDown();
-    doc.fontSize(12).text(`Description: ${weather.weather[0].description}`, { align: 'left' });
-    doc.fontSize(12).text(`Temperature: ${(weather.main.temp - 273.15).toFixed(2)} °C`, { align: 'left' });
-    doc.fontSize(12).text(`Feels Like: ${(weather.main.feels_like - 273.15).toFixed(2)} °C`, { align: 'left' });
-    doc.fontSize(12).text(`Humidity: ${weather.main.humidity} %`, { align: 'left' });
-    doc.fontSize(12).text(`Pressure: ${weather.main.pressure} hPa`, { align: 'left' });
-    doc.fontSize(12).text(`Wind Speed: ${weather.wind.speed} m/s`, { align: 'left' });
-    doc.fontSize(12).text(`Cloudiness: ${weather.clouds.all} %`, { align: 'left' });
-
-    doc.end();
-  });
-}
-
 async function sendWeatherEmail(user, weather) {
-  try {
-    const pdfData = await generateWeatherPDF(user, weather);
-    
-    const mailOptions = {
-      from: process.env.GMAIL_USER,
-      to: user.email,
-      subject: 'Weather Report',
-      text: `Hello,\n\nHere is your weather report for ${user.location}.\n\nRegards,\nWeather Report Service`,
-      attachments: [
-        {
-          filename: 'WeatherReport.pdf',
-          content: pdfData
-        }
-      ]
-    };
+  const mailOptions = {
+    from: process.env.GMAIL_USER,
+    to: user.email,
+    subject: 'Weather Report',
+    text: `Hello,\n\nHere is your weather report for ${user.location}:\n\n${weather}\n\nRegards,\nWeather Report Service`,
+  };
 
+  try {
     await transporter.sendMail(mailOptions);
     console.log(`Email sent to ${user.email}`);
   } catch (error) {
@@ -101,7 +50,7 @@ async function fetchAndStoreWeather(user) {
     user.weatherData.push({ date, data: JSON.stringify(weather) });
     await user.save();
 
-    await sendWeatherEmail(user, weather);
+    await sendWeatherEmail(user, JSON.stringify(weather, null, 2));
   } catch (error) {
     console.error(`Error fetching weather for ${user.email}: `, error);
   }
@@ -127,6 +76,7 @@ app.post('/users', async (req, res) => {
     } else {
       res.status(500).send({ message: 'Internal server error' });
     }
+    console.error(error);
   }
 });
 
@@ -142,6 +92,7 @@ app.put('/users/:email', async (req, res) => {
     res.send(user);
   } catch (error) {
     res.status(500).send({ message: 'Internal server error' });
+    console.error(error);
   }
 });
 
@@ -158,6 +109,7 @@ app.get('/users/:email/weather', async (req, res) => {
     res.send(weatherData);
   } catch (error) {
     res.status(500).send({ message: 'Internal server error' });
+    console.error(error);
   }
 });
 
@@ -173,6 +125,7 @@ app.post('/send-weather-report', async (req, res) => {
     res.send({ message: 'Weather report sent' });
   } catch (error) {
     res.status(500).send({ message: 'Internal server error' });
+    console.error(error);
   }
 });
 
@@ -193,6 +146,7 @@ app.get('/test-email', async (req, res) => {
     res.send('Test email sent');
   } catch (error) {
     res.status(500).send(`Error sending test email: ${error.message}`);
+    console.error(error);
   }
 });
 
