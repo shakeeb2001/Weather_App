@@ -172,26 +172,26 @@ app.post('/send-weather-report', async (req, res) => {
   }
 });
 
-// Test email route
-app.get('/test-email', async (req, res) => {
-  const testUser = {
-    email: process.env.GMAIL_USER,
-    location: 'Colombo'
-  };
-  const testWeather = {
-    weather: [{ description: 'clear sky' }],
-    main: { temp: 300.15 },
-    wind: { speed: 5.14 },
-    name: 'Colombo'
-  };
-  try {
-    await sendWeatherEmail(testUser, testWeather);
-    res.send('Test email sent');
-  } catch (error) {
-    res.status(500).send(`Error sending test email: ${error.message}`);
-    console.error(error);
-  }
-});
+// // Test email route
+// app.get('/test-email', async (req, res) => {
+//   const testUser = {
+//     email: process.env.GMAIL_USER,
+//     location: 'Colombo'
+//   };
+//   const testWeather = {
+//     weather: [{ description: 'clear sky' }],
+//     main: { temp: 300.15 },
+//     wind: { speed: 5.14 },
+//     name: 'Colombo'
+//   };
+//   try {
+//     await sendWeatherEmail(testUser, testWeather);
+//     res.send('Test email sent');
+//   } catch (error) {
+//     res.status(500).send(`Error sending test email: ${error.message}`);
+//     console.error(error);
+//   }
+// });
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
