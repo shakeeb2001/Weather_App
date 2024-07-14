@@ -411,13 +411,30 @@ function generateWeatherPDF(user, weather) {
       resolve(pdfData);
     });
 
-    doc.fontSize(16).text(`Weather Report for ${user.location}`, { align: 'center' });
+    // Format the weather data
+    const main = weather.main;
+    const wind = weather.wind;
+    const weatherDescription = weather.weather[0].description;
+    const location = weather.name;
+    const date = new Date().toLocaleDateString();
+
+    // Header
+    doc.fontSize(16).text(`Weather Report for ${location}`, { align: 'center' });
     doc.moveDown();
-    doc.fontSize(12).text(`Date: ${new Date().toLocaleDateString()}`);
+    doc.fontSize(12).text(`Date: ${date}`, { align: 'center' });
     doc.moveDown();
-    doc.fontSize(12).text(`Weather Data:`);
-    doc.fontSize(10).text(JSON.stringify(weather, null, 2), { align: 'left' });
-    
+
+    // Weather details
+    doc.fontSize(14).text('Weather Details:', { underline: true });
+    doc.moveDown();
+
+    doc.fontSize(12).text(`Description: ${weatherDescription.charAt(0).toUpperCase() + weatherDescription.slice(1)}`, { indent: 20 });
+    doc.text(`Temperature: ${(main.temp - 273.15).toFixed(2)}°C`, { indent: 20 });
+    doc.text(`Humidity: ${main.humidity}%`, { indent: 20 });
+    doc.text(`Pressure: ${main.pressure} hPa`, { indent: 20 });
+    doc.text(`Wind Speed: ${wind.speed} m/s`, { indent: 20 });
+    doc.text(`Wind Direction: ${wind.deg}°`, { indent: 20 });
+
     doc.end();
   });
 }
@@ -499,4 +516,3 @@ const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
-
