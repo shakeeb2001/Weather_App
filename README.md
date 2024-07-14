@@ -22,5 +22,5 @@ This is a Node.js application that provides weather reports to registered users 
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/yourusername/weather-report-service.git
+   git clone https://github.com/shakeeb2001/Weather_App.git
    cd weather-report-service
