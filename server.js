@@ -6,6 +6,9 @@ const axios = require('axios');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
 const User = require('./models/User');
+const PDFDocument = require('pdfkit');
+const fs = require('fs');
+const path = require('path');
 
 dotenv.config();
 
@@ -25,17 +28,57 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+async function createWeatherPDF(user, weather) {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument();
+    const filePath = path.join(__dirname, 'weather_report.pdf');
+    const stream = fs.createWriteStream(filePath);
+
+    doc.pipe(stream);
+    doc.fontSize(16).text(`Weather Report for ${user.location}`, { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(12).text(`Date: ${new Date().toLocaleDateString()}`);
+    doc.moveDown();
+    doc.text(`Location: ${user.location}`);
+    doc.moveDown();
+    doc.text(`Weather: ${weather.weather[0].description}`);
+    doc.moveDown();
+    doc.text(`Temperature: ${weather.main.temp}°K`);
+    doc.moveDown();
+    doc.text(`Humidity: ${weather.main.humidity}%`);
+    doc.moveDown();
+    doc.text(`Wind Speed: ${weather.wind.speed} m/s`);
+    doc.end();
+
+    stream.on('finish', () => {
+      resolve(filePath);
+    });
+
+    stream.on('error', reject);
+  });
+}
+
 async function sendWeatherEmail(user, weather) {
+  const weatherData = JSON.stringify(weather, null, 2);
+  const pdfPath = await createWeatherPDF(user, weather);
+
   const mailOptions = {
     from: process.env.GMAIL_USER,
     to: user.email,
     subject: 'Weather Report',
-    text: `Hello,\n\nHere is your weather report for ${user.location}:\n\n${weather}\n\nRegards,\nWeather Report Service`,
+    text: `Hello,\n\nHere is your weather report for ${user.location}:\n\n${weatherData}\n\nRegards,\nWeather Report Service`,
+    attachments: [
+      {
+        filename: 'weather_report.pdf',
+        path: pdfPath
+      }
+    ]
   };
 
   try {
     await transporter.sendMail(mailOptions);
     console.log(`Email sent to ${user.email}`);
+    fs.unlinkSync(pdfPath); // Remove the file after sending the email
   } catch (error) {
     console.error(`Error sending email to ${user.email}: `, error);
   }
@@ -50,7 +93,7 @@ async function fetchAndStoreWeather(user) {
     user.weatherData.push({ date, data: JSON.stringify(weather) });
     await user.save();
 
-    await sendWeatherEmail(user, JSON.stringify(weather, null, 2));
+    await sendWeatherEmail(user, weather);
   } catch (error) {
     console.error(`Error fetching weather for ${user.email}: `, error);
   }
